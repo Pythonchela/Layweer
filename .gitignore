@@ -1,0 +1,61 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+build/
+
+# Prisma
+prisma/dev.db
+prisma/dev.db-journal
+prisma/*.db
+prisma/*.db-journal
+
+# Environment
+.env*
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Uploads
+public/uploads/
+
+.data/
+prisma/prisma/*.db
+prisma/prisma/*.db-journal
+*.tsbuildinfo
+
+.next-test/
+
+# Generated declarations and private database files at any depth
+next-env.d.ts
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.pem
+*.key
+
+# Local verification screenshots
+/account-test-ready.jpg
+/admin-test-access.jpg
+/admin-preview.jpg
+/security-preview.jpg
