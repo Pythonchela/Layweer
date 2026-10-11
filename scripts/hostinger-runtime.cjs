@@ -19,7 +19,7 @@ module.exports = function configureHostingerRuntime() {
       const stat = fs.lstatSync(siteConfig);
       if (!stat.isFile() || stat.uid !== process.getuid() || (stat.mode & 0o077))
         throw new Error("Managed site settings must be an owner-only private file");
-      for (const key of ["APP_ORIGIN", "APP_ALLOWED_ORIGINS"]) {
+      for (const key of ["APP_ORIGIN", "APP_ALLOWED_ORIGINS", "REQUIRE_PRIVILEGED_2FA"]) {
         const match = fs.readFileSync(siteConfig, "utf8").match(new RegExp("^" + key + "=(.*)$", "m"));
         if (match) process.env[key] = match[1].trim().replace(/^(['"])(.*)\1$/, "$2");
       }

@@ -765,6 +765,34 @@ async function main() {
     mfaBlocked,
     "Missing required MFA blocks privileged records on the server",
   );
+  const previousNodeEnv = process.env.NODE_ENV,
+    previousOrigin = process.env.APP_ORIGIN;
+  process.env.NODE_ENV = "production";
+  process.env.APP_ORIGIN = "https://deployment.test.invalid";
+  delete process.env.REQUIRE_PRIVILEGED_2FA;
+  check(authentication.privileged2FARequired("SUPER_ADMIN"), "Live deployment requires MFA by default");
+  process.env.REQUIRE_PRIVILEGED_2FA = "false";
+  check(
+    !(await authentication.getUserFromToken(rootToken)).mustEnable2FA &&
+      !authentication.privileged2FARequired("SUPER_ADMIN"),
+    "Explicit testing preference disables mandatory enrollment on a live domain",
+  );
+  const testingAdmin = await administration.authorize(
+    new (require("next/server").NextRequest)(base + "/api/admin/settings", {
+      headers: { Cookie: admin },
+    }),
+    "settings:read",
+  );
+  check(testingAdmin.role === "SUPER_ADMIN", "Testing administrator can open records without enrollment");
+  process.env.REQUIRE_PRIVILEGED_2FA = "invalid";
+  check(authentication.privileged2FARequired("SUPER_ADMIN"), "Invalid testing preference does not bypass production MFA");
+  process.env.REQUIRE_PRIVILEGED_2FA = "true";
+  process.env.APP_ORIGIN = "http://localhost:3101";
+  check(authentication.privileged2FARequired("SUPER_ADMIN"), "Explicit requirement still applies to local testing");
+  if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+  else process.env.NODE_ENV = previousNodeEnv;
+  if (previousOrigin === undefined) delete process.env.APP_ORIGIN;
+  else process.env.APP_ORIGIN = previousOrigin;
   delete process.env.REQUIRE_PRIVILEGED_2FA;
   await require("../src/lib/prisma.ts").prisma.$disconnect();
   fs.writeFileSync(

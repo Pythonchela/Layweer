@@ -16,13 +16,15 @@ export const verifyPassword = (password: string, hash: string) =>
 export const sessionHash = (token: string) =>
   createHash("sha256").update(token).digest("hex");
 export function privileged2FARequired(role: string) {
+  const policy = process.env.REQUIRE_PRIVILEGED_2FA;
   const required =
-    process.env.REQUIRE_PRIVILEGED_2FA === "true" ||
+    policy !== "false" && (
+    policy === "true" ||
     (process.env.NODE_ENV === "production" &&
       !!process.env.APP_ORIGIN &&
       !/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(
         process.env.APP_ORIGIN,
-      ));
+      )));
   return (
     required &&
     [

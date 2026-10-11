@@ -38,7 +38,9 @@ export default function SecurityPanel() {
       else {
         toast.success(
           action === "password"
-            ? "Password saved. Use your new password for authenticator setup."
+            ? data.mustEnable2FA
+              ? "Password saved. Use your new password for authenticator setup."
+              : "Password saved."
             : "Security settings updated",
         );
         setSecret("");
@@ -109,8 +111,7 @@ export default function SecurityPanel() {
             className="block border rounded-lg p-2 w-full mt-1"
           />
           <span className="block mt-2 text-slate-500">
-            Use the password you currently sign in with. If you have changed it,
-            enter your new password here for authenticator setup.
+            Enter the password you use to sign in before changing your security settings.
           </span>
         </label>
         <details open={Boolean(data.mustChangePassword)} className="space-y-4">
@@ -139,10 +140,14 @@ export default function SecurityPanel() {
           </button>
         </details>
         <hr />
-        <h2 className="font-semibold">
+        <details open={Boolean(data.mustEnable2FA || data.twoFAEnabled || secret)} className="space-y-3">
+        <summary className="font-semibold cursor-pointer">
           Two-factor authentication{" "}
-          {data?.twoFAEnabled ? "· Enabled" : "· Disabled"}
-        </h2>
+          {data.twoFAEnabled ? "· Enabled" : data.twoFARequired ? "· Required" : "· Optional"}
+        </summary>
+        {!data.twoFARequired && !data.twoFAEnabled && (
+          <p className="text-sm text-slate-600">Authenticator setup is optional. You can open your workspace without enabling it.</p>
+        )}
         {!data.twoFAEnabled && (
           <p className="text-sm text-slate-600">
             Enter your current sign-in password above, choose Set up
@@ -165,7 +170,7 @@ export default function SecurityPanel() {
             Then enter its six-digit code below.
           </p>
         )}
-        <input
+        {(secret || data.twoFAEnabled) && <input
           aria-label="Authenticator code"
           inputMode="numeric"
           value={code}
@@ -173,7 +178,7 @@ export default function SecurityPanel() {
           placeholder="Six-digit code"
           maxLength={6}
           className="border rounded-lg p-2"
-        />
+        />}
         {secret && (
           <button
             disabled={busy}
@@ -192,6 +197,7 @@ export default function SecurityPanel() {
             Disable 2FA
           </button>
         )}
+        </details>
       </section>
       <section className="bg-white rounded-xl border p-5">
         <h2 className="font-semibold mb-3">Active sessions</h2>
