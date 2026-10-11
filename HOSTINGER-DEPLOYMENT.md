@@ -1,6 +1,6 @@
 # Hostinger deployment plan
 
-Prepared 10 October 2026 for Hostinger Business or Cloud hosting. This is a deployment-readiness plan, not evidence that the app has already been deployed. No existing Hostinger website, domain, database or DNS record was changed.
+Prepared 10 October 2026; updated 11 October 2026 for Hostinger Business or Cloud hosting. This guide describes deployment and verification requirements; a source upload or build alone does not establish a working production system.
 
 ## Hosting route
 
@@ -14,7 +14,7 @@ The chosen production domain is **divinewall.in**. Use one domain for the applic
 - `/portal`: authenticated client workspace
 - `/account`: password and authenticator setup
 
-A separate admin domain is optional and is not needed for the current app. The production admin URL will be `https://divinewall.in/admin`, and the client portal will be `https://divinewall.in/portal`. Do not replace an existing website to create this app; use a staging domain/subdomain and review the target first. The connected Hostinger website listing currently contains no site for `divinewall.in`; this does not prove domain registration or DNS ownership.
+A separate admin domain is optional and is not needed for the current app. The production admin URL will be `https://divinewall.in/admin`, and the client portal will be `https://divinewall.in/portal`. Do not replace an unrelated existing website. On 11 October, SSH access confirmed the owner-created deployment under hosting user `u931810717`; this is different from the account exposed by the current hosting connector. Only the app's domain is within the deployment scope.
 
 ## What works locally
 
@@ -24,13 +24,13 @@ The production build, 70 core integration assertions and 387 security assertions
 
 ## Changes required for managed hosting
 
-1. **Database compatibility and migration.** `prisma/schema.prisma` currently declares SQLite, and `.env.local` points to a Windows-local file. Managed Hostinger hosting offers MySQL/MariaDB. Adapt the Prisma schema, schema-generation/setup commands, field lengths/types and recovery tooling for MySQL. Migrate the records deliberately and verify counts, relationships, authentication, billing transactions and document links. Simply replacing `DATABASE_URL` with a MySQL URL is insufficient. [Hostinger MySQL connection guide](https://www.hostinger.com/support/connecting-a-hostinger-mysql-database-to-a-node-js-application/).
+1. **Database compatibility and migration.** The canonical `prisma/schema.prisma` retains SQLite for local development. `scripts/database-schema.cjs` generates a MySQL schema with long-text columns and indexed/relation keys under `prisma/mysql/`. The build selects its Prisma client using `DATABASE_URL`, applies committed MySQL migrations and then builds Next.js. The owner-created database is `u931810717_lawyer`, with user `u931810717_lawuser`; a read-only SSH check confirmed access to an empty MariaDB database on 11 October. Real records must still be deliberately imported or initialized, with counts, relationships, authentication, billing transactions and document links verified. [Hostinger MySQL connection guide](https://www.hostinger.com/support/connecting-a-hostinger-mysql-database-to-a-node-js-application/).
 
 2. **Persistent private document storage.** The storage code already accepts `DOCUMENT_STORAGE_DIR`. On Hostinger it needs a verified writable private directory outside `public_html` and outside deployment/build folders, or an implementation using private object storage. Hostinger replaces managed deployment folders during redeployment; files written inside them must not be relied upon for persistence. Confirm allowed paths with the hosting account and prove that uploads survive a redeployment before accepting real documents. [Deployment file layout](https://www.hostinger.com/support/how-to-deploy-a-nodejs-website-in-hostinger/).
 
 3. **Managed runtime configuration.** Use Hostinger's Next.js framework handling and the platform-provided port/startup settings. The current `npm start` binds to loopback for the local preview; verify the managed platform's routing/startup mechanism rather than assuming the local preview command is sufficient. Generate Prisma for Linux during installation/build; do not upload Windows `node_modules` or a Windows-generated database engine.
 
-4. **Production initialization.** Create tables and migrate/import records in a controlled preparation step; do not reseed known demo accounts during every deployment. Preserve the existing document/authenticator keys when transferring existing encrypted data. Arrange backups and restore to the chosen production database/storage before launch.
+4. **Production initialization.** The build applies reviewed schema migrations, without resetting the database or creating known demo accounts. `db:setup`, demo seeding, reset and development migrations are blocked for MySQL. Import an encrypted backup with `scripts/restore-backup.cjs ... --mysql` to an empty database in an isolated checkout, or provision an initial administrator separately. Preserve existing document/authenticator keys when transferring encrypted data. Arrange backups and test restoration before launch.
 
 5. **Notifications, if enabled.** The existing reminder sender is a separate long-running process, disabled in the current workspace. Verify a supported worker/scheduler arrangement on the selected plan before advertising automated reminders. Gateway and messaging providers need their own credentials and staging verification.
 
@@ -51,7 +51,7 @@ NOTIFICATIONS_ENABLED="false"
 
 If a separate `AUTH_ENCRYPTION_KEY` is in use, preserve it as well. Keep the exact HTTPS origin without a trailing slash. Enable `TRUST_PROXY=true` only after confirming the platform replaces untrusted forwarding headers. Payment/notification credentials remain optional until the corresponding services are enabled and verified.
 
-The MySQL URL is applicable only after the schema/runtime migration is implemented and tested. From the deployed Node app, use the local Hostinger database host `127.0.0.1:3306`, not the externally exposed database hostname. URL-encode special characters in the database password.
+The MySQL URL must be available during installation/build and runtime; changing it after a SQLite build requires a new MySQL build. From the deployed Node app, use the local Hostinger database host `127.0.0.1:3306`, not the externally exposed database hostname. URL-encode special characters in the password. Verify tables and transactional operations with `node scripts/check-database.cjs --write-probe`; this rolls back all verification records.
 
 ## Source upload contents
 

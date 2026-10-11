@@ -1,4 +1,4 @@
-// Restore to a NEW directory only; never overwrite an existing database.
+// Restore to a NEW directory and an empty database only.
 const fs = require("node:fs");
 const path = require("node:path");
 const { gunzipSync } = require("node:zlib");
@@ -8,10 +8,11 @@ const crypto = require("node:crypto");
 require("@next/env").loadEnvConfig(process.cwd());
 async function main() {
   const input = process.argv[2],
-    output = process.argv[3];
+    output = process.argv[3],
+    mysql = process.argv.includes("--mysql");
   if (!input || !output)
     throw new Error(
-      "Usage: node scripts/restore-backup.cjs <backup.lfbackup> <new-output-directory>",
+      "Usage: node scripts/restore-backup.cjs <backup.lfbackup> <new-output-directory> [--mysql] (MySQL uses DATABASE_URL and must be empty)",
     );
   const target = path.resolve(output);
   if (fs.existsSync(target))
@@ -39,13 +40,38 @@ async function main() {
   const backup = JSON.parse(gunzipSync(bytes).toString());
   if (backup.version !== 1 || !backup.records || !backup.files)
     throw new Error("Unsupported backup");
-  fs.mkdirSync(target, { recursive: true });
-  const databaseUrl =
+  const databaseUrl = mysql ? process.env.DATABASE_URL :
     "file:" + path.join(target, "restored.db").replaceAll("\\", "/");
-  const env = { ...process.env, DATABASE_URL: databaseUrl };
-  await require("./create-database.cjs")(databaseUrl);
+  require("./database-schema.cjs").schemaForUrl(databaseUrl);
+  if (mysql && !databaseUrl?.startsWith("mysql://")) throw new Error("--mysql requires a MySQL DATABASE_URL");
+  const generatedSchema = fs.readFileSync(require.resolve(".prisma/client/schema.prisma"), "utf8");
+  if (!generatedSchema.includes(`provider = "${mysql ? "mysql" : "sqlite"}"`))
+    throw new Error("Generate Prisma for the restore target in an isolated checkout before restoring");
+  for (const name of Object.keys(backup.files))
+    if (!/^[a-f0-9]{48}$/.test(name)) throw new Error("Invalid stored file name");
+  if (!mysql) {
+    fs.mkdirSync(target, { recursive: true, mode: 0o700 });
+    await require("./create-database.cjs")(databaseUrl);
+  }
   const db = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
   try {
+    if (mysql) {
+      const tables = await db.$queryRawUnsafe("SELECT TABLE_NAME AS name FROM information_schema.tables WHERE TABLE_SCHEMA = DATABASE()");
+      const allowed = new Set(Prisma.dmmf.datamodel.models.map(model => model.name).concat("_prisma_migrations"));
+      if (tables.some(table => !allowed.has(table.name))) throw new Error("Restore database contains unrelated tables; choose an empty database");
+      if (tables.some(table => table.name !== "_prisma_migrations")) {
+        for (const model of Prisma.dmmf.datamodel.models) {
+          if (await db[model.name[0].toLowerCase() + model.name.slice(1)].count())
+            throw new Error("Restore database contains records; existing data will not be overwritten");
+        }
+      } else {
+        const result = spawnSync(process.execPath, ["scripts/database.cjs", "deploy"], {
+          stdio: "inherit", env: { ...process.env, DATABASE_URL: databaseUrl },
+        });
+        if (result.status !== 0) throw new Error("Unable to initialize the empty restore database");
+      }
+      fs.mkdirSync(target, { recursive: true, mode: 0o700 });
+    }
     const ordered = [
       "User",
       "Employee",
@@ -99,15 +125,15 @@ async function main() {
       { timeout: 120000 },
     );
     const folder = path.join(target, "documents");
-    fs.mkdirSync(folder);
+    fs.mkdirSync(folder, { mode: 0o700 });
     for (const [name, bytes] of Object.entries(backup.files)) {
       if (!/^[a-f0-9]{48}$/.test(name))
         throw new Error("Invalid stored file name");
-      fs.writeFileSync(path.join(folder, name), Buffer.from(bytes, "base64"));
+      fs.writeFileSync(path.join(folder, name), Buffer.from(bytes, "base64"), { mode: 0o600 });
     }
     console.log("Restored database and encrypted documents to:", target);
     console.log(
-      "Keep the original DOCUMENT_ENCRYPTION_KEY. Copy the restored documents into .data/documents when switching to the restored database.",
+      "Keep the original DOCUMENT_ENCRYPTION_KEY. Set DOCUMENT_STORAGE_DIR to the restored documents directory when switching to the restored database.",
     );
   } finally {
     await db.$disconnect();

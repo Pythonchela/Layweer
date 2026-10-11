@@ -16,6 +16,9 @@ async function main() {
   }
   loadEnvConfig(process.cwd());
   const url = process.env.DATABASE_URL;
+  const schema = require("./database-schema.cjs").schemaForUrl(url, action === "generate");
+  if (url?.startsWith("mysql://") && ["setup", "seed", "reset", "migrate"].includes(action))
+    throw new Error("Demo setup, reset and development migrations are disabled for MySQL. Use db:deploy for committed migrations and restore/provision accounts separately.");
   if (["setup", "push"].includes(action) && url?.startsWith("file:")) {
     const name = url.slice(5),
       file = path.isAbsolute(name) ? name : path.resolve("prisma", name);
@@ -29,10 +32,10 @@ async function main() {
   function run(args) {
     const result = spawnSync(
       process.execPath,
-      [require.resolve("prisma/build/index.js"), ...args],
+      [require.resolve("prisma/build/index.js"), ...args, "--schema", schema],
       { stdio: "inherit", env: process.env },
     );
-    if (result.status) throw new Error("Database command failed");
+    if (result.error || result.status !== 0) throw new Error("Database command failed");
   }
   function seed() {
     const result = spawnSync(process.execPath, ["prisma/seed.js"], {
@@ -48,6 +51,10 @@ async function main() {
     if (security.status) throw new Error("Security setup failed");
   } else if (action === "seed") seed();
   else if (action === "generate") run(["generate"]);
+  else if (action === "deploy") {
+    if (!url?.startsWith("mysql://")) throw new Error("db:deploy requires a MySQL DATABASE_URL. Use db:push for local SQLite.");
+    run(["migrate", "deploy"]);
+  }
   else if (action === "push") run(["db", "push"]);
   else if (action === "studio") run(["studio"]);
   else if (action === "migrate") run(["migrate", "dev"]);
