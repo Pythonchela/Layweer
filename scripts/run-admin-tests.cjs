@@ -47,6 +47,7 @@ async function main() {
     NOTIFICATIONS_ENABLED: "false",
     // Isolate provider/origin policy from the owner's deployment configuration.
     APP_ORIGIN: "http://localhost:3101",
+    APP_ALLOWED_ORIGINS: "",
     REQUIRE_PRIVILEGED_2FA: "false",
     TRUST_PROXY: "false",
   };

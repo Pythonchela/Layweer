@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -22,9 +22,24 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [dbError, setDbError] = useState(false);
+  const [insecureLoginUrl, setInsecureLoginUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (window.location.protocol === 'http:' &&
+        !['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname)) {
+      const url = new URL(window.location.href);
+      url.protocol = 'https:';
+      setInsecureLoginUrl(url.href);
+    }
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (window.location.protocol === 'http:' &&
+        !['localhost', '127.0.0.1', '[::1]'].includes(window.location.hostname)) {
+      toast.error('Open the secure HTTPS version to sign in.');
+      return;
+    }
     if (!form.email || !form.password) {
       toast.error("Please enter email and password");
       return;
@@ -139,6 +154,13 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {insecureLoginUrl ? (
+            <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <p className="font-semibold">Open secure login</p>
+              <p className="mt-2">Sign in using the HTTPS version of this website. If it does not open, the website&apos;s secure connection still needs to be activated.</p>
+              <a href={insecureLoginUrl} className="mt-4 inline-block font-semibold underline">Open secure login</a>
+            </div>
+          ) : (
           <form onSubmit={handleLogin} className="space-y-4">
             <label className="block text-sm text-gray-300">
               Authenticator code (if enabled)
@@ -202,6 +224,7 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
+          )}
 
           {/* Demo credentials — clickable */}
           {process.env.NODE_ENV !== "production" && (

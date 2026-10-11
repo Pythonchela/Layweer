@@ -21,6 +21,7 @@
     "db:reset": "node scripts/database.cjs reset",
     "test:admin": "node scripts/run-admin-tests.cjs",
     "test:security": "node scripts/run-admin-tests.cjs --security",
+    "test:origins": "node scripts/origin-security-test.cjs",
     "notifications:worker": "node scripts/notification-worker.cjs",
     "security:setup": "node scripts/security-setup.cjs",
     "postinstall": "node scripts/database.cjs generate"

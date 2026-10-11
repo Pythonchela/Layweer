@@ -6,6 +6,7 @@ import {
   randomBytes,
 } from "crypto";
 import { prisma } from "./prisma";
+import { allowedRequestOrigin } from "./origins";
 
 export async function boundedBody(req: NextRequest, maxBytes: number) {
   if (Number(req.headers.get("content-length") || 0) > maxBytes)
@@ -44,8 +45,12 @@ export function validOrigin(req: NextRequest) {
   const site = req.headers.get("sec-fetch-site");
   if (site === "cross-site") return false;
   const origin = req.headers.get("origin");
-  // Clients without a browser Origin are supported; browsers must match the deployment origin.
-  return !origin || origin === (process.env.APP_ORIGIN || req.nextUrl.origin);
+  return allowedRequestOrigin(
+    origin,
+    req.nextUrl.origin,
+    process.env.APP_ORIGIN,
+    process.env.APP_ALLOWED_ORIGINS,
+  );
 }
 export function clientAddress(req: NextRequest) {
   // Trust forwarding headers only when a configured reverse proxy replaces them.

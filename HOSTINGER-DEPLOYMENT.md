@@ -42,6 +42,7 @@ Configure private values through Hostinger's environment variables, not source f
 NODE_ENV="production"
 DATABASE_URL="mysql://DATABASE_USER:URL_ENCODED_PASSWORD@127.0.0.1:3306/DATABASE_NAME"
 APP_ORIGIN="https://divinewall.in"
+APP_ALLOWED_ORIGINS="https://www.divinewall.in"
 DOCUMENT_STORAGE_DIR="ABSOLUTE_VERIFIED_PRIVATE_PERSISTENT_PATH"
 DOCUMENT_ENCRYPTION_KEY="EXISTING_64_HEX_CHARACTER_KEY_WHEN_MIGRATING_DATA"
 REQUIRE_PRIVILEGED_2FA="true"
@@ -51,6 +52,8 @@ HOSTINGER_CPU_LIMIT="2"
 ```
 
 If a separate `AUTH_ENCRYPTION_KEY` is in use, preserve it as well. Keep the exact HTTPS origin without a trailing slash. Enable `TRUST_PROXY=true` only after confirming the platform replaces untrusted forwarding headers. Payment/notification credentials remain optional until the corresponding services are enabled and verified.
+
+`APP_ORIGIN` is one complete website origin. Put additional complete HTTPS origins in `APP_ALLOWED_ORIGINS`, separated by commas. A value such as `https://divinewall.in, www.divinewall.in` in `APP_ORIGIN` is invalid. The app accepts only the canonical origin and explicitly configured aliases, rejects unrelated sites and HTTP downgrades, and directs public HTTP login visitors to secure login before sending their password. Managed workers refresh these two settings from the private platform configuration on startup.
 
 The MySQL URL must be available during installation/build and runtime; changing it after a SQLite build requires a new MySQL build. From the deployed Node app, use the local Hostinger database host `127.0.0.1:3306`, not the externally exposed database hostname. URL-encode special characters in the password. Verify tables and transactional operations with `node scripts/check-database.cjs --write-probe`; this rolls back all verification records.
 
