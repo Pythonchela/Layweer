@@ -3,9 +3,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { gunzipSync } = require("node:zlib");
 const { spawnSync } = require("node:child_process");
-const { PrismaClient, Prisma } = require("@prisma/client");
 const crypto = require("node:crypto");
 require("@next/env").loadEnvConfig(process.cwd());
+require("./hostinger-runtime.cjs")();
+const { PrismaClient, Prisma } = require("@prisma/client");
 async function main() {
   const input = process.argv[2],
     output = process.argv[3],

@@ -41,6 +41,8 @@ Set `DATABASE_URL` in the hosting environment to `mysql://USER:URL_ENCODED_PASSW
 
 The generated MySQL schema is in `prisma/mysql/schema.prisma`; change models in the canonical `prisma/schema.prisma`, regenerate with `node -e "require('./scripts/database-schema.cjs').writeMysqlSchema()"`, and commit a corresponding MySQL migration. Never edit an already applied migration. Local SQLite schema changes still use `npm run db:push`.
 
+On managed Hostinger, startup limits CPU affinity to two available CPUs before Prisma loads, to prevent its native engine from exhausting the shared account's thread allowance. `HOSTINGER_CPU_LIMIT` can explicitly select 1–4 CPUs. CLI/build helpers use the same limit when configured. The app also shares one Prisma instance and defaults MySQL pools to three connections, preserving explicit connection-string overrides. This does not change authentication or role permissions.
+
 Run `npm run db:check` to check all tables, or `node scripts/check-database.cjs --write-probe` to verify transactional create/read/update, relations, Unicode text and billing without leaving test records. These checks require a client generated for the selected provider.
 
 Restore an encrypted backup to an empty MySQL database in an isolated checkout configured for that database:

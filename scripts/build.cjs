@@ -1,5 +1,6 @@
 const { spawnSync } = require("node:child_process");
 require("@next/env").loadEnvConfig(process.cwd());
+require("./hostinger-runtime.cjs")();
 
 function run(args) {
   const result = spawnSync(process.execPath, args, { stdio: "inherit", env: process.env });

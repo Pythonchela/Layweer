@@ -1,5 +1,6 @@
 const crypto = require("node:crypto");
 require("@next/env").loadEnvConfig(process.cwd());
+require("./hostinger-runtime.cjs")();
 const { PrismaClient, Prisma } = require("@prisma/client");
 const db = new PrismaClient();
 

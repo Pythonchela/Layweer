@@ -15,6 +15,7 @@ async function main() {
     fs.writeFileSync(".env.local", env);
   }
   loadEnvConfig(process.cwd());
+  require("./hostinger-runtime.cjs")();
   const url = process.env.DATABASE_URL;
   const schema = require("./database-schema.cjs").schemaForUrl(url, action === "generate");
   if (url?.startsWith("mysql://") && ["setup", "seed", "reset", "migrate"].includes(action))

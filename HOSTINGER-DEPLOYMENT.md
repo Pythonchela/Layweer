@@ -47,11 +47,24 @@ DOCUMENT_ENCRYPTION_KEY="EXISTING_64_HEX_CHARACTER_KEY_WHEN_MIGRATING_DATA"
 REQUIRE_PRIVILEGED_2FA="true"
 TRUST_PROXY="false"
 NOTIFICATIONS_ENABLED="false"
+HOSTINGER_CPU_LIMIT="2"
 ```
 
 If a separate `AUTH_ENCRYPTION_KEY` is in use, preserve it as well. Keep the exact HTTPS origin without a trailing slash. Enable `TRUST_PROXY=true` only after confirming the platform replaces untrusted forwarding headers. Payment/notification credentials remain optional until the corresponding services are enabled and verified.
 
 The MySQL URL must be available during installation/build and runtime; changing it after a SQLite build requires a new MySQL build. From the deployed Node app, use the local Hostinger database host `127.0.0.1:3306`, not the externally exposed database hostname. URL-encode special characters in the password. Verify tables and transactional operations with `node scripts/check-database.cjs --write-probe`; this rolls back all verification records.
+
+`src/instrumentation.ts` applies the shared-hosting CPU limit before loading database routes. Build/database/restore helpers apply the same limit when configured. This prevents the Prisma native engine from spawning threads for every visible host CPU and exceeding the shared account's thread quota. MySQL application pools default to three connections and can be overridden by the URL's `connection_limit` parameter.
+
+## Server verification on 11 October 2026
+
+- SSH key access to the owner-selected server was successful.
+- The owner's saved MySQL URL authenticated to MariaDB 11.8.9, using local host `127.0.0.1`.
+- The initial migration is recorded as completed; all 32 application tables plus `_prisma_migrations` exist.
+- A transactional write check verified create/read/update, related records, long Unicode text and billing, then rolled back all verification records.
+- The live login route changed from database-unavailable HTTP 503 to HTTP 401 for a deliberately nonexistent account. This proves the route reaches MySQL; it does not prove owner sign-in, because the new database currently has no users.
+- The database records and administrator initialization remain dependent on the owner's choice to transfer local data or start fresh.
+- `divinewall.in` did not resolve through the checked local/server resolvers, and direct-IP HTTPS routing did not complete. The server can be checked with the domain's HTTP Host header; public DNS/HTTPS must still be established before transmitting real sign-in credentials.
 
 ## Source upload contents
 
