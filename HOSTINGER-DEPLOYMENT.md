@@ -62,9 +62,10 @@ The MySQL URL must be available during installation/build and runtime; changing 
 - The owner's saved MySQL URL authenticated to MariaDB 11.8.9, using local host `127.0.0.1`.
 - The initial migration is recorded as completed; all 32 application tables plus `_prisma_migrations` exist.
 - A transactional write check verified create/read/update, related records, long Unicode text and billing, then rolled back all verification records.
-- The live login route changed from database-unavailable HTTP 503 to HTTP 401 for a deliberately nonexistent account. This proves the route reaches MySQL; it does not prove owner sign-in, because the new database currently has no users.
-- The database records and administrator initialization remain dependent on the owner's choice to transfer local data or start fresh.
-- `divinewall.in` did not resolve through the checked local/server resolvers, and direct-IP HTTPS routing did not complete. The server can be checked with the domain's HTTP Host header; public DNS/HTTPS must still be established before transmitting real sign-in credentials.
+- Before import, the live login route changed from database-unavailable HTTP 503 to HTTP 401 for a deliberately nonexistent account, confirming that it could reach the empty MySQL database.
+- After the owner authorized migration, all local business records were imported and compared field for field: 3 users, 1 employee, 1 client, 6 holidays, 2 news updates, 4 testimonials and 6 audit entries. Password hashes and account flags were preserved; sessions and login counters were excluded. One encrypted storage file was transferred and its decryption verified. No cases or invoices existed in the local snapshot.
+- A private database dump and environment backup were saved before import. Transferred document/authentication settings are retained in owner-only `~/.config/layweer/divinewall.in/data.json`, outside managed deployment folders. The runtime reads only these encryption/storage settings from that file; the database URL and security policies still come from the managed environment. This avoids cached hPanel worker settings reverting the migrated keys. Preserve this file with database/document backups, and update it deliberately if rotating keys.
+- `divinewall.in` now resolves to the selected server, but HTTPS still fails during the TLS handshake. The server can be checked locally through SSH with the domain's HTTP Host header; public HTTPS must be established before transmitting real sign-in credentials.
 
 ## Source upload contents
 
